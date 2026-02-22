@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
+import 'enrollment_screen.dart';
 
 class RegistrationScreen extends StatefulWidget {
   const RegistrationScreen({super.key});
@@ -42,12 +43,26 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     if (!mounted) return;
 
     if (success) {
+      // Navigate to face enrollment right after registration
+      final userData = await _authService.getCurrentUser();
+      final userId = userData?['email'] ?? _emailController.text.trim();
+
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Registration successful!'),
+          content: Text('Account created! Now enroll your face.'),
           backgroundColor: Colors.green,
         ),
       );
+
+      await Navigator.push<bool>(
+        context,
+        MaterialPageRoute(
+          builder: (context) => EnrollmentScreen(userId: userId),
+        ),
+      );
+
+      if (!mounted) return;
       Navigator.pushReplacementNamed(context, '/login');
     } else {
       ScaffoldMessenger.of(context).showSnackBar(

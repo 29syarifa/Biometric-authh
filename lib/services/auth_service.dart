@@ -1,9 +1,18 @@
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'dart:convert';
 
 class AuthService {
   static const String _userKey = 'user_data';
   static const String _biometricKey = 'biometric_enabled';
+
+  // SHA-256 password hashing – required for cryptographic security
+  String _hashPassword(String password) {
+    final bytes = utf8.encode(password);
+    final digest = sha256.convert(bytes);
+    return digest.toString();
+  }
 
   // Check if user is registered
   Future<bool> hasRegisteredUser() async {
@@ -23,14 +32,14 @@ class AuthService {
       final userData = {
         'username': username,
         'email': email,
-        'password': password, // In production, this should be hashed
+        'password': _hashPassword(password), // SHA-256 hashed
         'created_at': DateTime.now().toIso8601String(),
       };
       
       await prefs.setString(_userKey, jsonEncode(userData));
       return true;
     } catch (e) {
-      print('Registration error: $e');
+      debugPrint('Registration error: $e');
       return false;
     }
   }
@@ -49,13 +58,13 @@ class AuthService {
       final userData = jsonDecode(userDataString) as Map<String, dynamic>;
       
       // Check credentials
-      if (userData['email'] == email && userData['password'] == password) {
+      if (userData['email'] == email && userData['password'] == _hashPassword(password)) {
         return true;
       }
       
       return false;
     } catch (e) {
-      print('Login error: $e');
+      debugPrint('Login error: $e');
       return false;
     }
   }
@@ -75,7 +84,7 @@ class AuthService {
         'email': userData['email'] as String,
       };
     } catch (e) {
-      print('Get user error: $e');
+      debugPrint('Get user error: $e');
       return null;
     }
   }
@@ -96,6 +105,30 @@ class AuthService {
   Future<void> disableBiometric() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_biometricKey, false);
+  }
+
+  // Reset password (for forgot password feature)
+  Future<bool> resetPassword({
+    required String email,
+    required String newPassword,
+  }) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userDataString = prefs.getString(_userKey);
+      if (userDataString == null) return false;
+
+      final userData = jsonDecode(userDataString) as Map<String, dynamic>;
+
+      // Check email matches
+      if (userData['email'] != email) return false;
+
+      // Update password (SHA-256 hashed)
+      userData['password'] = _hashPassword(newPassword);
+      await prefs.setString(_userKey, jsonEncode(userData));
+      return true;
+    } catch (e) {
+      return false;
+    }
   }
 
   // Logout

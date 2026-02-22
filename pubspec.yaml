@@ -1,35 +1,36 @@
-name: biometric_auth_app
-description: Mobile Biometric Authentication System using Fingerprint
+name: biometric_auth
+description: "Biometric Authentication System"
 publish_to: 'none'
+
 version: 1.0.0+1
 
 environment:
-  sdk: '>=3.0.0 <4.0.0'
+  sdk: ^3.6.0
 
 dependencies:
   flutter:
     sdk: flutter
-  
-  # Local Authentication for biometric (fingerprint, face ID)
+  cupertino_icons: ^1.0.8
   local_auth: ^2.1.8
-  
-  # Local storage for user data
   shared_preferences: ^2.2.2
-  
-  # UI
-  cupertino_icons: ^1.0.6
 
-  camera: ^0.10.5+9              # Camera access
-  google_ml_kit: ^0.16.3         # Face detection
-  path_provider: ^2.1.2          # File system paths
-  image: ^4.1.7                  # Image processing
-   
-  encrypt: ^5.0.1
+  # Camera & Face Detection (Dev A)
+  camera: ^0.10.5+9
+  google_mlkit_face_detection: ^0.11.0
+  path_provider: ^2.1.2
+  image: ^4.1.7
+  permission_handler: ^11.3.0
+
+  # Security (Dev C) - Real AES-256 encryption
+  flutter_secure_storage: ^9.0.0
+  crypto: ^3.0.3
+  pointycastle: ^3.7.4
+  convert: ^3.1.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^3.0.0
+  flutter_lints: ^5.0.0
 
 flutter:
   uses-material-design: true

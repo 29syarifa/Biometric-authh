@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../services/biometric_service.dart';
+import '../services/biometric_data_manager.dart';
+import 'enrollment_screen.dart';
+import 'verification_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -12,9 +15,11 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final _authService = AuthService();
   final _biometricService = BiometricService();
-  
+  final _dataManager = BiometricDataManager();
+
   Map<String, String>? _userData;
   bool _biometricEnabled = false;
+  bool _faceEnrolled = false;
 
   @override
   void initState() {
@@ -25,10 +30,13 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _loadUserData() async {
     final data = await _authService.getCurrentUser();
     final biometricStatus = await _authService.isBiometricEnabled();
-    
+    final userId = data?['email'] ?? '';
+    final faceEnrolled = await _dataManager.isEnrolled(userId);
+
     setState(() {
       _userData = data;
       _biometricEnabled = biometricStatus;
+      _faceEnrolled = faceEnrolled;
     });
   }
 
@@ -91,6 +99,14 @@ class _HomeScreenState extends State<HomeScreen> {
         title: const Text('Home'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.settings_outlined),
+            onPressed: () async {
+              await Navigator.pushNamed(context, '/settings');
+              _loadUserData();
+            },
+            tooltip: 'Settings',
+          ),
+          IconButton(
             icon: const Icon(Icons.logout),
             onPressed: _logout,
             tooltip: 'Logout',
@@ -140,6 +156,95 @@ class _HomeScreenState extends State<HomeScreen> {
                               fontSize: 16,
                               color: Colors.grey[600],
                             ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  // Face Recognition Card
+                  Card(
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Text(
+                                'Face Recognition',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const Spacer(),
+                              Chip(
+                                label: Text(
+                                  _faceEnrolled ? 'Enrolled' : 'Not Enrolled',
+                                  style: TextStyle(
+                                    color: _faceEnrolled
+                                        ? Colors.green
+                                        : Colors.grey,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                backgroundColor: _faceEnrolled
+                                    ? Colors.green.shade50
+                                    : Colors.grey.shade100,
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: () async {
+                                    final userId =
+                                        _userData?['email'] ?? '';
+                                    await Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            EnrollmentScreen(userId: userId),
+                                      ),
+                                    );
+                                    _loadUserData();
+                                  },
+                                  icon: const Icon(Icons.camera_alt),
+                                  label: Text(_faceEnrolled
+                                      ? 'Re-Enroll'
+                                      : 'Enroll Face'),
+                                ),
+                              ),
+                              if (_faceEnrolled) ...[
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: ElevatedButton.icon(
+                                    onPressed: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              VerificationScreen(
+                                            userId:
+                                                _userData?['email'] ?? '',
+                                            fromLogin: false,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    icon: const Icon(Icons.verified_user),
+                                    label: const Text('Verify'),
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
                         ],
                       ),
@@ -206,12 +311,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             title: Text('Secure Authentication'),
                             subtitle: Text('Your biometric data stays on your device'),
                           ),
-                          const ListTile(
-                            leading: Icon(Icons.speed, color: Colors.green),
-                            title: Text('Fast Login'),
-                            subtitle: Text('Login instantly with fingerprint'),
-                          ),
-                          const ListTile(
+                           const ListTile(
                             leading: Icon(Icons.privacy_tip, color: Colors.orange),
                             title: Text('Privacy First'),
                             subtitle: Text('No biometric data is sent to servers'),

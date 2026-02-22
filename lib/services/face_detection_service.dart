@@ -1,14 +1,13 @@
-import 'package:google_ml_kit/google_ml_kit.dart';
+import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:camera/camera.dart';
-import 'dart:io';
 
 class FaceDetectionService {
-  final FaceDetector _faceDetector = GoogleMlKit.vision.faceDetector(
-    FaceDetectorOptions(
-      enableLandmarks: true,      // Detect eyes, nose, mouth
-      enableClassification: true,  // Smile, eyes open probability
-      enableTracking: true,        // Track faces across frames
-      minFaceSize: 0.15,          // Minimum face size (15% of image)
+  final FaceDetector _faceDetector = FaceDetector(
+    options: FaceDetectorOptions(
+      enableLandmarks: true,
+      enableClassification: true,
+      enableTracking: true,
+      minFaceSize: 0.15,
       performanceMode: FaceDetectorMode.accurate,
     ),
   );
@@ -76,32 +75,32 @@ class FaceDetectionService {
     final headEulerAngleY = face.headEulerAngleY; // Left/right turn
     final headEulerAngleZ = face.headEulerAngleZ; // Tilt
     
-    if (headEulerAngleY != null && headEulerAngleY!.abs() > 15) {
+    if (headEulerAngleY != null && headEulerAngleY.abs() > 15) {
       return FaceValidation(
         isValid: false,
         reason: 'Face your head straight toward camera.',
       );
     }
-    
-    if (headEulerAngleZ != null && headEulerAngleZ!.abs() > 15) {
+
+    if (headEulerAngleZ != null && headEulerAngleZ.abs() > 15) {
       return FaceValidation(
         isValid: false,
         reason: 'Keep your head level, don\'t tilt.',
       );
     }
-    
+
     // Check if eyes are open (for liveness)
     final leftEyeOpen = face.leftEyeOpenProbability;
     final rightEyeOpen = face.rightEyeOpenProbability;
-    
-    if (leftEyeOpen != null && leftEyeOpen! < 0.5) {
+
+    if (leftEyeOpen != null && leftEyeOpen < 0.5) {
       return FaceValidation(
         isValid: false,
         reason: 'Please open both eyes.',
       );
     }
-    
-    if (rightEyeOpen != null && rightEyeOpen! < 0.5) {
+
+    if (rightEyeOpen != null && rightEyeOpen < 0.5) {
       return FaceValidation(
         isValid: false,
         reason: 'Please open both eyes.',
@@ -121,6 +120,23 @@ class FaceDetectionService {
       return FaceAngle.right;
     } else {
       return FaceAngle.center;
+    }
+  }
+
+  /// Returns eye open probabilities for liveness detection.
+  /// Returns null if face detection fails or classifier is unavailable.
+  Future<EyeState?> getEyeState(XFile imageFile) async {
+    try {
+      final inputImage = InputImage.fromFilePath(imageFile.path);
+      final faces = await _faceDetector.processImage(inputImage);
+      if (faces.isEmpty) return null;
+      final face = faces.first;
+      final left = face.leftEyeOpenProbability;
+      final right = face.rightEyeOpenProbability;
+      if (left == null || right == null) return null;
+      return EyeState(left: left, right: right);
+    } catch (_) {
+      return null;
     }
   }
   
@@ -157,4 +173,20 @@ enum FaceAngle {
   left,
   center,
   right,
+}
+
+/// Holds the eye open probabilities from ML Kit (0.0 = closed, 1.0 = open).
+class EyeState {
+  final double left;
+  final double right;
+  const EyeState({required this.left, required this.right});
+
+  /// Average eye openness
+  double get avg => (left + right) / 2.0;
+
+  /// True if both eyes appear open
+  bool get isOpen => left > 0.55 && right > 0.55;
+
+  /// True if at least one eye appears closed (blink)
+  bool get isClosed => left < 0.35 || right < 0.35;
 }

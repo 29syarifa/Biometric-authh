@@ -14,7 +14,7 @@ class _BiometricLoginScreenState extends State<BiometricLoginScreen> {
   String message = "Authenticate using biometrics";
 
   void _authenticate() async {
-    bool canUse = await _biometricService.canUseBiometric();
+    bool canUse = await _biometricService.isBiometricAvailable();
 
     if (!canUse) {
       setState(() {

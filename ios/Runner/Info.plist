@@ -45,5 +45,11 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Camera is required for face recognition enrollment and verification</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Photo library access for saving face images</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Face ID is used for biometric authentication</string>
 </dict>
 </plist>

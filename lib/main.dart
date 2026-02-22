@@ -3,6 +3,7 @@ import 'screens/splash_screen.dart';
 import 'screens/registration_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
+import 'screens/settings_screen.dart';
 
 void main() {
   runApp(const BiometricAuthApp());
@@ -30,6 +31,7 @@ class BiometricAuthApp extends StatelessWidget {
         '/register': (context) => const RegistrationScreen(),
         '/login': (context) => const LoginScreen(),
         '/home': (context) => const HomeScreen(),
+        '/settings': (context) => const SettingsScreen(),
       },
     );
   }

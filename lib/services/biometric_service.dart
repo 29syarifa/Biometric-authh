@@ -1,4 +1,5 @@
-import 'package:local_auth/local_auth.dart';
+﻿import 'package:local_auth/local_auth.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter/services.dart';
 
 class BiometricService {
@@ -9,15 +10,13 @@ class BiometricService {
     try {
       final bool canAuthenticateWithBiometrics = await _localAuth.canCheckBiometrics;
       final bool canAuthenticate = canAuthenticateWithBiometrics || await _localAuth.isDeviceSupported();
-      
+
       if (!canAuthenticate) return false;
-      
-      // Check if device has fingerprint enrolled
+
       final List<BiometricType> availableBiometrics = await _localAuth.getAvailableBiometrics();
-      
       return availableBiometrics.isNotEmpty;
     } on PlatformException catch (e) {
-      print('Biometric check error: $e');
+      debugPrint('Biometric check error: $e');
       return false;
     }
   }
@@ -27,32 +26,29 @@ class BiometricService {
     try {
       return await _localAuth.getAvailableBiometrics();
     } on PlatformException catch (e) {
-      print('Get biometrics error: $e');
+      debugPrint('Get biometrics error: $e');
       return [];
     }
   }
 
-  // Authenticate with biometrics
+  // Authenticate with biometrics (fingerprint / device biometric)
   Future<bool> authenticate() async {
     try {
       final bool canAuthenticate = await isBiometricAvailable();
-      
       if (!canAuthenticate) {
-        print('Biometric authentication not available');
+        debugPrint('Biometric authentication not available');
         return false;
       }
 
-      final bool didAuthenticate = await _localAuth.authenticate(
+      return await _localAuth.authenticate(
         localizedReason: 'Please authenticate to access your account',
         options: const AuthenticationOptions(
           stickyAuth: true,
           biometricOnly: true,
         ),
       );
-
-      return didAuthenticate;
     } on PlatformException catch (e) {
-      print('Authentication error: $e');
+      debugPrint('Authentication error: $e');
       return false;
     }
   }
@@ -70,8 +66,6 @@ class BiometricService {
         return 'Strong Biometric';
       case BiometricType.weak:
         return 'Weak Biometric';
-      default:
-        return 'Biometric';
     }
   }
 }
