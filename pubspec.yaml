@@ -24,6 +24,8 @@ dependencies:
   path_provider: ^2.1.2          # File system paths
   image: ^4.1.7                  # Image processing
    
+  encrypt: ^5.0.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
