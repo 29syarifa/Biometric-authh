@@ -388,9 +388,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       Divider(height: 1),
                       ListTile(
                         leading: Icon(Icons.memory, color: Colors.purple),
-                        title: Text('256-dim CNN-inspired Embeddings'),
+                        title: Text('640-dim Face Embeddings'),
                         subtitle: Text(
-                          'Sobel convolution + spatial pooling (2-channel, 64-cell grid)',
+                          'LBP 512-dim (texture) + Sobel 128-dim (edges), L2-normalized',
                         ),
                       ),
                     ],
