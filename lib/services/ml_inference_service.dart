@@ -3,12 +3,12 @@ import 'dart:typed_data';
 import 'embedding_service.dart';
 
 /// MLInferenceService orchestrates the full ML pipeline:
-/// Image → Preprocess → [Sobel Conv] → Extract 256-dim Embedding → Match
+/// Image → Preprocess → [LBP + Sobel] → Extract 640-dim Embedding → Match
 ///
 /// Requirement mapping:
 ///   Req 1 – Camera data retrieved by CameraService (caller)
 ///   Req 2 – Preprocessing (Gaussian blur, contrast stretch) in PreprocessingService
-///   Req 3 – CNN-inspired Sobel convolution + spatial pooling in EmbeddingService
+///   Req 3 – CNN-inspired LBP texture + Sobel convolution + spatial pooling in EmbeddingService
 ///   Req 5 – Integration: this service bridges all stages to the auth system
 class MLInferenceService {
   /// Threshold raised to 0.78 after adding LBP channel.

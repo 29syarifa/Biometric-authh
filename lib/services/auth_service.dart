@@ -1,17 +1,61 @@
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:crypto/crypto.dart';
+import 'package:pointycastle/export.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'dart:convert';
+import 'dart:math';
+import 'dart:typed_data';
 
 class AuthService {
   static const String _userKey = 'user_data';
   static const String _biometricKey = 'biometric_enabled';
 
-  // SHA-256 password hashing – required for cryptographic security
+  /// Number of PBKDF2 iterations — high count to resist brute-force.
+  static const int _pbkdf2Iterations = 100000;
+  static const int _saltLength = 16; // 128-bit random salt
+  static const int _keyLength = 32; // 256-bit derived hash
+
+  // ─── PBKDF2-HMAC-SHA256 password hashing with random salt ─────
+  // Returns "salt_hex:hash_hex" so the salt is stored alongside the hash.
+  // PBKDF2 is intentionally slow (100 000 iterations) to resist brute-force
+  // and rainbow-table attacks, unlike plain SHA-256 which is a fast hash.
+
+  /// Generate a cryptographically secure random salt.
+  Uint8List _generateSalt() {
+    final rng = Random.secure();
+    return Uint8List.fromList(List.generate(_saltLength, (_) => rng.nextInt(256)));
+  }
+
+  /// Derive a 256-bit key from [password] and [salt] using PBKDF2-HMAC-SHA256.
+  Uint8List _pbkdf2(String password, Uint8List salt) {
+    final pbkdf2 = PBKDF2KeyDerivator(HMac(SHA256Digest(), 64))
+      ..init(Pbkdf2Parameters(salt, _pbkdf2Iterations, _keyLength));
+    return pbkdf2.process(Uint8List.fromList(utf8.encode(password)));
+  }
+
+  /// Hash [password] with a fresh random salt.
+  /// Returns "salt_hex:hash_hex".
   String _hashPassword(String password) {
-    final bytes = utf8.encode(password);
-    final digest = sha256.convert(bytes);
-    return digest.toString();
+    final salt = _generateSalt();
+    final hash = _pbkdf2(password, salt);
+    final saltHex = salt.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+    final hashHex = hash.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+    return '$saltHex:$hashHex';
+  }
+
+  /// Verify [password] against a stored "salt_hex:hash_hex" string.
+  bool _verifyPassword(String password, String stored) {
+    final parts = stored.split(':');
+    if (parts.length != 2) return false;
+    final saltHex = parts[0];
+    final expectedHashHex = parts[1];
+    // Reconstruct salt bytes
+    final salt = Uint8List.fromList(
+      List.generate(saltHex.length ~/ 2,
+          (i) => int.parse(saltHex.substring(i * 2, i * 2 + 2), radix: 16)),
+    );
+    final hash = _pbkdf2(password, salt);
+    final hashHex = hash.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+    return hashHex == expectedHashHex;
   }
 
   // Check if user is registered
@@ -32,7 +76,7 @@ class AuthService {
       final userData = {
         'username': username,
         'email': email,
-        'password': _hashPassword(password), // SHA-256 hashed
+        'password': _hashPassword(password), // PBKDF2-HMAC-SHA256 + random salt
         'created_at': DateTime.now().toIso8601String(),
       };
       
@@ -57,8 +101,9 @@ class AuthService {
       
       final userData = jsonDecode(userDataString) as Map<String, dynamic>;
       
-      // Check credentials
-      if (userData['email'] == email && userData['password'] == _hashPassword(password)) {
+      // Check credentials — PBKDF2 verify (re-derives key from stored salt)
+      if (userData['email'] == email &&
+          _verifyPassword(password, userData['password'] as String)) {
         return true;
       }
       
@@ -122,7 +167,7 @@ class AuthService {
       // Check email matches
       if (userData['email'] != email) return false;
 
-      // Update password (SHA-256 hashed)
+      // Update password (PBKDF2 with fresh random salt)
       userData['password'] = _hashPassword(newPassword);
       await prefs.setString(_userKey, jsonEncode(userData));
       return true;
